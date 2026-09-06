@@ -1,0 +1,31 @@
+{
+  "name": "isard-code-battle",
+  "type": "module",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "backend",
+    "organizer",
+    "client"
+  ],
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "build": "npm run build --workspaces",
+    "typecheck": "npm run typecheck --workspaces && tsc -p tsconfig.scripts.json",
+    "test": "npm run test --workspaces",
+    "start": "npm run start -w backend",
+    "dev": "npm run dev -w backend",
+    "test:e2e": "tsx scripts/e2e.ts",
+    "format": "prettier --write .",
+    "format:check": "prettier --check ."
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.56.1",
+    "@types/node": "^24.0.0",
+    "prettier": "^3.6.2",
+    "tsx": "^4.20.6",
+    "typescript": "~5.9.3"
+  }
+}

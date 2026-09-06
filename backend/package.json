@@ -1,0 +1,29 @@
+{
+  "name": "@isard/backend",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "start": "node dist/main.js",
+    "dev": "tsx watch src/main.ts",
+    "migrate": "tsx src/migrate.ts",
+    "import:sqlite": "tsx src/import-sqlite.ts",
+    "test": "tsx --test --test-concurrency=1 tests/*.test.ts"
+  },
+  "dependencies": {
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "mysql2": "^3.15.3",
+    "sequelize": "^6.37.7",
+    "swagger-ui-dist": "^5.30.0",
+    "yazl": "^3.3.1"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.5",
+    "@types/supertest": "^6.0.3",
+    "@types/yazl": "^3.3.0",
+    "supertest": "^7.1.4"
+  }
+}

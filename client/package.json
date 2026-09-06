@@ -1,0 +1,28 @@
+{
+  "name": "@isard/client",
+  "version": "0.1.0",
+  "type": "module",
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "bin": {
+    "isard-sync": "dist/sync.js",
+    "isard-submit": "dist/submit.js"
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.test.json --noEmit",
+    "test": "tsx --test tests/*.test.ts"
+  },
+  "dependencies": {
+    "yauzl": "^3.2.0",
+    "unicode-case-folding": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/yauzl": "^2.10.3"
+  },
+  "engines": {
+    "node": ">=24"
+  }
+}
