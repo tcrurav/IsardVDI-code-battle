@@ -26,6 +26,27 @@ Para una instalación nueva:
 
 En Linux usar `npm` en lugar de `npm.cmd`. Para desarrollo: `npm.cmd run dev` (backend con recarga); opcionalmente `npm.cmd run dev -w organizer` (Vite con proxy al backend).
 
+### Actualizar un despliegue y gestionar retos
+
+Actualizar el código y ejecutar `npm ci` desde la raíz. Detener el proceso anterior
+del backend y arrancar con `npm start`: ahora compila todos los componentes antes
+de iniciar el servidor, de modo que el panel y la API se actualizan juntos.
+En Windows usar `npm.cmd`. Si el servicio arranca directamente con
+`node backend/dist/main.js`, ejecutar `npm run build` antes de reiniciar ese servicio.
+Mantener `backend/.env` y el volumen MySQL existentes.
+
+En el panel, abrir **Gestionar retos → Nuevo reto**, completar el título y los
+archivos públicos y pulsar **Guardar reto**. También se puede crear el primer
+reto con la competición pausada y sin participantes.
+
+Si el catálogo muestra un error 404, el servidor que recibe la petición no está
+ofreciendo `GET /api/organizer/challenges`; una base vacía debe devolver un catálogo
+vacío, no 404. Comprobar que se ha reiniciado el backend actualizado. Si hay un
+proxy, debe reenviar `/api/` completo al mismo backend, incluidas las rutas de
+retos y sus métodos GET, POST, PUT y DELETE. Después recargar el panel y pulsar
+**Actualizar retos**. Actualizar únicamente los archivos del panel no añade
+las rutas al proceso del backend que ya está en ejecución.
+
 ## Copia de seguridad de MySQL
 
 Con el servicio MySQL de Docker Compose en marcha y `backend/.env` configurado,

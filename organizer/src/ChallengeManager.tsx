@@ -62,6 +62,11 @@ export function ChallengeManager({
       throw new Error('La sesión ha caducado. Vuelve a conectar.');
     }
     if (!response.ok) {
+      if (response.status === 404 && path === '' && method === 'GET') {
+        throw new Error(
+          'El servidor no ofrece la gestión de retos (404). Actualiza y reinicia el backend junto con el panel; si usas un proxy, revisa que reenvíe /api/organizer/challenges. Después pulsa Actualizar retos.',
+        );
+      }
       const error = await response.json().catch(() => ({}));
       throw new Error(
         typeof error.detail === 'string' ? error.detail : 'No se pudo completar la operación.',

@@ -16,6 +16,7 @@
     "typecheck": "npm run typecheck --workspaces && tsc -p tsconfig.scripts.json",
     "test": "npm run test --workspaces",
     "start": "npm run start -w backend",
+    "prestart": "npm run build",
     "dev": "npm run dev -w backend",
     "test:e2e": "tsx scripts/e2e.ts",
     "backup:db": "tsx scripts/backup-db.ts",
