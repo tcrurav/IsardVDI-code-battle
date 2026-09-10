@@ -18,6 +18,8 @@
     "start": "npm run start -w backend",
     "dev": "npm run dev -w backend",
     "test:e2e": "tsx scripts/e2e.ts",
+    "backup:db": "tsx scripts/backup-db.ts",
+    "restore:db": "tsx scripts/restore-db.ts",
     "format": "prettier --write .",
     "format:check": "prettier --check ."
   },

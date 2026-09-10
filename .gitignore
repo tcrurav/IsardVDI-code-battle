@@ -7,4 +7,6 @@ dist/
 coverage/
 *.tsbuildinfo
 artifacts/
+*.sql.gz
+*.sql.gz.partial
 __pycache__/
