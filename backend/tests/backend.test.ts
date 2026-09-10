@@ -80,6 +80,247 @@ const patch = (body: object) =>
     .patch('/api/organizer/state')
     .set('Authorization', 'Bearer organizer-test')
     .send(body);
+const adminUpdate = (id: number, body: object, auth = 'organizer-test') =>
+  request(instance.app)
+    .put(`/api/organizer/challenges/${id}`)
+    .set('Authorization', `Bearer ${auth}`)
+    .send(body);
+const adminDelete = (id: number, auth = 'organizer-test') =>
+  request(instance.app)
+    .delete(`/api/organizer/challenges/${id}`)
+    .set('Authorization', `Bearer ${auth}`);
+const newChallenge = () => ({
+  position: 4,
+  title: 'Nuevo reto',
+  description: 'Instrucciones',
+  public_files: { 'main.py': '# empezar' },
+});
+
+test('challenge CRUD requires organizer token on every endpoint', async () => {
+  for (const auth of [token, 'bad', '']) {
+    assert.equal((await get('/api/organizer/challenges', auth)).status, 401);
+    assert.equal((await get('/api/organizer/challenges/1', auth)).status, 401);
+    assert.equal((await post('/api/organizer/challenges', newChallenge(), auth)).status, 401);
+    assert.equal(
+      (await adminUpdate(1, { title: 'x', description: '', public_files: {} }, auth)).status,
+      401,
+    );
+    assert.equal((await adminDelete(3, auth)).status, 401);
+  }
+  assert.equal(await instance.db.models.Challenge.count(), 3);
+});
+
+test('expected output preserves exact text, supports clearing and survives legacy updates', async () => {
+  const expected = '  Respuesta privada: ñ 🦉\n42\n';
+  const created = await post(
+    '/api/organizer/challenges',
+    {
+      ...newChallenge(),
+      expected_output: expected,
+    },
+    'organizer-test',
+  );
+  assert.equal(created.status, 201);
+  assert.equal(created.body.expected_output, expected);
+  const id = created.body.id;
+  const change = { title: 'Editado', description: '', public_files: { 'main.js': '' } };
+  assert.equal((await adminUpdate(id, change)).body.expected_output, expected);
+  assert.equal(
+    (await get(`/api/organizer/challenges/${id}`, 'organizer-test')).body.expected_output,
+    expected,
+  );
+  for (const value of ['', null, expected]) {
+    assert.equal((await adminUpdate(id, { ...change, expected_output: value })).status, 200);
+    assert.equal((await instance.db.models.Challenge.findByPk(id))!.expected_output, value);
+  }
+  const existing = (await instance.db.models.Challenge.findByPk(1))!;
+  await get('/api/challenges/available');
+  assert.equal(
+    (
+      await adminUpdate(1, {
+        title: existing.title,
+        description: existing.description,
+        public_files: existing.public_files,
+        expected_output: expected,
+      })
+    ).body.expected_output,
+    expected,
+  );
+  const submitted = await post('/api/submissions', {
+    challenge_id: 1,
+    files: existing.public_files,
+  });
+  assert.equal(submitted.status, 201);
+  assert.equal(submitted.body.status, 'pending');
+  assert.ok(!JSON.stringify(submitted.body).includes(expected));
+  assert.equal(
+    (
+      await post('/api/submissions', {
+        challenge_id: 1,
+        files: existing.public_files,
+        expected_output: expected,
+      })
+    ).status,
+    422,
+  );
+});
+
+test('expected output migration upgrades existing rows and resumes after committed DDL', async () => {
+  const db = instance.db;
+  const before = (await db.models.Challenge.findByPk(1))!.toJSON();
+  await db.sequelize.query('ALTER TABLE challenges DROP COLUMN expected_output');
+  await db.sequelize.query("DELETE FROM schema_migrations WHERE version = '002_expected_output'");
+  await migrate(db);
+  assert.deepEqual((await db.models.Challenge.findByPk(1))!.toJSON(), before);
+  await db.models.Challenge.update({ expected_output: 'Conservar\n' }, { where: { id: 1 } });
+  await db.sequelize.query("DELETE FROM schema_migrations WHERE version = '002_expected_output'");
+  await migrate(db);
+  await migrate(db);
+  assert.equal((await db.models.Challenge.findByPk(1))!.expected_output, 'Conservar\n');
+  assert.equal(await db.models.Challenge.count(), 3);
+});
+test('organizer creates, reads, edits and deletes unused last challenge without unlocking it', async () => {
+  const list = await get('/api/organizer/challenges', 'organizer-test');
+  assert.equal(list.body.next_position, 4);
+  assert.equal(list.body.items.length, 3);
+  assert.ok(!('public_files' in list.body.items[0]));
+  const created = await post('/api/organizer/challenges', newChallenge(), 'organizer-test');
+  assert.equal(created.status, 201);
+  const id = created.body.id;
+  assert.deepEqual(
+    (await get(`/api/organizer/challenges/${id}`, 'organizer-test')).body.public_files,
+    newChallenge().public_files,
+  );
+  const change = {
+    title: 'Editado',
+    description: 'Descripción nueva',
+    public_files: { 'src/main.py': 'print(42)' },
+  };
+  assert.equal((await adminUpdate(id, change)).status, 200);
+  assert.equal((await instance.db.models.Challenge.findByPk(id))!.title, 'Editado');
+  assert.equal((await get(`/api/challenges/${id}/package`)).status, 403);
+  assert.equal(await instance.db.models.Progress.count(), 0);
+  assert.equal((await adminDelete(id)).status, 204);
+  assert.equal((await get(`/api/organizer/challenges/${id}`, 'organizer-test')).status, 404);
+  assert.equal((await adminDelete(id)).status, 404);
+});
+test('challenge admin validates payloads, portable paths and UTF-8 limits before writes', async () => {
+  const invalid = [
+    { title: '' },
+    { title: 'x'.repeat(201) },
+    { position: '4' },
+    { public_files: {} },
+    { public_files: { '../secret': 'x' } },
+    { public_files: { 'CON.txt': 'x' } },
+    { public_files: { a: 'x', 'a/b': 'y' } },
+    { public_files: { straße: 'x', STRASSE: 'y' } },
+    { public_files: { 'main.py': 'é'.repeat(500_001) } },
+    { public_files: { 'main.py': false } },
+    { score: 100 },
+    { description: null },
+    { expected_output: 42 },
+    { expected_output: {} },
+    { expected_output: '🦉'.repeat(15_001) },
+  ];
+  for (const patch of invalid)
+    assert.equal(
+      (await post('/api/organizer/challenges', { ...newChallenge(), ...patch }, 'organizer-test'))
+        .status,
+      422,
+      JSON.stringify(Object.keys(patch)),
+    );
+  assert.equal(await instance.db.models.Challenge.count(), 3);
+  assert.equal(
+    (await adminUpdate(3, { title: 'x', description: '', public_files: {}, position: 1 })).status,
+    422,
+  );
+});
+test('positions remain consecutive, concurrent creates serialize and deletion adjusts global bound', async () => {
+  assert.equal(
+    (await post('/api/organizer/challenges', { ...newChallenge(), position: 6 }, 'organizer-test'))
+      .status,
+    409,
+  );
+  assert.equal((await adminDelete(2)).status, 409);
+  const replies = await Promise.all([
+    post('/api/organizer/challenges', newChallenge(), 'organizer-test'),
+    post('/api/organizer/challenges', newChallenge(), 'organizer-test'),
+  ]);
+  assert.deepEqual(replies.map((r) => r.status).sort(), [201, 409]);
+  const id = replies.find((r) => r.status === 201)!.body.id;
+  await instance.db.models.CompetitionState.update({ current_challenge: 4 }, { where: { id: 1 } });
+  assert.equal((await adminDelete(id)).status, 204);
+  assert.equal((await instance.db.models.CompetitionState.findByPk(1))!.current_challenge, 3);
+  await adminDelete(3);
+  await adminDelete(2);
+  assert.equal((await adminDelete(1)).status, 204);
+  assert.equal((await instance.db.models.CompetitionState.findByPk(1))!.current_challenge, 1);
+  assert.equal((await get('/api/organizer/challenges', 'organizer-test')).body.next_position, 1);
+});
+test('used challenges allow content edits but retain file names, identity, progress and submissions', async () => {
+  const m = instance.db.models;
+  await m.Progress.create({ participant_id: 1, challenge_id: 3, completed: true, score: 25 });
+  await m.Submission.create({ participant_id: 1, challenge_id: 3, files: { 'main.py': 'work' } });
+  const before = (await m.Challenge.findByPk(3))!;
+  const response = await adminUpdate(3, {
+    title: 'Título corregido',
+    description: 'Otra descripción',
+    public_files: before.public_files,
+  });
+  assert.equal(response.status, 200);
+  assert.equal(
+    (
+      await adminUpdate(3, {
+        title: 'Título corregido',
+        description: '',
+        public_files: { ...before.public_files, 'main.py': 'changed' },
+      })
+    ).status,
+    200,
+  );
+  assert.equal((await m.Challenge.findByPk(3))!.public_files['main.py'], 'changed');
+  assert.equal((await m.Submission.findOne())!.files['main.py'], 'work');
+  assert.equal(
+    (await adminUpdate(3, { title: 'x', description: '', public_files: { 'main.py': 'changed' } }))
+      .status,
+    409,
+  );
+  assert.equal((await adminDelete(3)).status, 409);
+  assert.equal((await m.Progress.findOne())!.score, 25);
+  assert.equal(await m.Submission.count(), 1);
+  const last = (await get('/api/organizer/challenges', 'organizer-test')).body.items.at(-1);
+  assert.equal(last.in_use, true);
+  assert.equal(last.can_delete, false);
+});
+test('download racing manifest edit uses a single committed version', async () => {
+  const m = instance.db.models;
+  const oldFiles = (await m.Challenge.findByPk(1))!.public_files;
+  const [download, edit] = await Promise.all([
+    get('/api/challenges/1/package')
+      .buffer(true)
+      .parse((res, callback) => {
+        const chunks: Buffer[] = [];
+        res.on('data', (chunk) => chunks.push(chunk));
+        res.on('end', () => callback(null, Buffer.concat(chunks)));
+      }),
+    adminUpdate(1, { title: 'Reto uno', description: '', public_files: { 'main.py': 'new' } }),
+  ]);
+  assert.equal(download.status, 200);
+  assert.ok([200, 409].includes(edit.status));
+  const stored = (await m.Challenge.findByPk(1))!;
+  assert.deepEqual(stored.public_files, edit.status === 200 ? { 'main.py': 'new' } : oldFiles);
+  assert.deepEqual(
+    Object.fromEntries(
+      [...(await publicFiles(download.body))].map(([name, content]) => [
+        name,
+        content.toString('utf8'),
+      ]),
+    ),
+    stored.public_files,
+  );
+  assert.equal(await m.Progress.count(), 1);
+  assert.equal((await adminDelete(1)).status, 409);
+});
 test('health, static organizer, restart and versioned migrations preserve data', async () => {
   assert.deepEqual((await request(instance.app).get('/health')).body, { status: 'ok' });
   assert.equal((await request(instance.app).get('/organizer/')).status, 200);
@@ -193,6 +434,8 @@ test('positions not IDs, gaps rejected, rollback and concurrent unlocks stay uni
   assert.equal(await m.Progress.count({ where: { challenge_id: 88 } }), 1);
 });
 test('list persists only authorized metadata and package contains only manifest', async () => {
+  const secret = 'PRIVATE_EXPECTED_OUTPUT';
+  await instance.db.models.Challenge.update({ expected_output: secret }, { where: { id: 1 } });
   for (let i = 0; i < 2; i++) {
     const r = await get('/api/challenges/available');
     assert.equal(r.status, 200);
@@ -201,6 +444,8 @@ test('list persists only authorized metadata and package contains only manifest'
       [1],
     );
     assert.ok(!('public_files' in r.body[0]));
+    assert.ok(!('expected_output' in r.body[0]));
+    assert.ok(!JSON.stringify(r.body).includes(secret));
   }
   assert.equal(await instance.db.models.Progress.count(), 1);
   const r = await get('/api/challenges/1/package')
@@ -214,6 +459,7 @@ test('list persists only authorized metadata and package contains only manifest'
   assert.equal(r.headers['content-type'], 'application/zip');
   assert.equal(r.headers['cache-control'], 'no-store');
   const files = await publicFiles(r.body);
+  assert.ok([...files.values()].every((content) => !content.toString().includes(secret)));
   assert.deepEqual([...files.keys()], ['main.py', 'README.md']);
   assert.equal(files.get('main.py')!.toString(), '# Challenge 1\n');
 });

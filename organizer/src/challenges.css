@@ -1,0 +1,54 @@
+.challenge-manager {
+  border-top: 1px solid #d9dee4;
+  margin-top: 28px;
+  padding-top: 8px;
+}
+.challenge-form {
+  margin-top: 20px;
+}
+.challenge-form fieldset {
+  border: 1px solid #d9dee4;
+  border-radius: 4px;
+  margin: 16px 0;
+  padding: 16px;
+  min-width: 0;
+}
+.challenge-form legend {
+  font-weight: 600;
+}
+.challenge-form label {
+  margin-top: 12px;
+}
+.challenge-form input,
+.challenge-form textarea {
+  width: 100%;
+  box-sizing: border-box;
+}
+.challenge-form textarea {
+  font: inherit;
+  padding: 10px;
+  border: 1px solid #8996a4;
+  border-radius: 4px;
+  resize: vertical;
+}
+.public-file {
+  margin: 16px 0;
+  padding: 12px;
+  background: #f5f6f8;
+  border-radius: 4px;
+}
+.public-file textarea {
+  font-family: ui-monospace, monospace;
+}
+.public-file button {
+  margin-top: 8px;
+}
+.challenge-error {
+  color: #a41f27;
+  font-weight: 600;
+}
+.delete-challenge {
+  border: 1px solid #a41f27;
+  padding: 16px;
+  margin-top: 16px;
+}

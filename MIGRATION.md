@@ -1,5 +1,7 @@
 # Migración: plan y resultado
 
+Actualización posterior: CRUD de retos añadido por petición expresa del usuario; ver el registro al final. Los resultados de migración siguientes describen la entrega original.
+
 ## Estado y alcance
 
 - Inspección e implementación completadas el 2026-09-06. La implementación fue autorizada después del plan inicial.
@@ -80,3 +82,31 @@ No quedan bloques de implementación pendientes. Para continuar, leer el README 
 Paquete para las VMs: `artifacts/isard-client-0.1.0.tgz` (solo cliente). Los directorios `.runtime/`, `.migration-reference/`, `artifacts/`, `node_modules/`, builds y `.env` están excluidos de Git. El test de MySQL necesita `TEST_DATABASE_URL` con permiso para crear/eliminar esquemas temporales `isard_test_*`; nunca usar los datos migrados como fixtures. Solo queda el despliegue en las VMs reales, fuera de esta migración local; los comandos para instalar el paquete están en README.
 
 El contenedor de pruebas `isard-migration-mysql` quedó detenido al terminar; `docker start isard-migration-mysql` permite reutilizarlo en el puerto 3307 con `TEST_DATABASE_URL=mysql://root:isard-local-test@127.0.0.1:3307/isard_test` (credencial exclusiva de pruebas locales). Resultado Linux final con código de salida 0 en `.runtime/linux-verified.log`. El contenedor de Compose con los datos migrados continúa activo.
+
+## Ampliación: gestión de retos (2026-09-06)
+
+- Implementado CRUD autorizado con token de organizador en `/api/organizer/challenges` (GET/POST) y `/api/organizer/challenges/{id}` (GET/PUT/DELETE). Servicio en `backend/src/services/challenge-admin.ts`; documentación en `/docs` y README.
+- Interfaz **Gestionar retos** en organizer: lista, detalle, formulario de título/descripción, edición de archivos públicos y confirmación de borrado. Componente `organizer/src/ChallengeManager.tsx`, estilos específicos, errores visibles y tokens solo en memoria.
+- Posiciones fijas y altas en la primera posición libre para conservar la secuencia. Solo se elimina el último reto sin progreso/submissions; si era el global, el límite vuelve al anterior (mínimo 1). Archivos inmutables después de cualquier actividad; título y descripción siguen editables. Se validan límites y rutas compatibles con el CLI. No hay borrados en cascada ni cambios de puntuación.
+- Autorización y CRUD comparten orden de bloqueo estado/reto, para impedir cambios de manifiesto durante un desbloqueo. No requiere migración de tablas. No se modificó el cliente ni el proyecto original.
+- Verificación: build y tipado completos; 63 pruebas (backend 23, organizer 9, client 31), incluyendo permisos, CRUD, validación, concurrencia y conservación de progreso. E2E Chromium contra MySQL temporal: crear, consultar/editar, eliminar con confirmación y restricciones; escritorio y móvil revisados en `.runtime/screenshots/challenges-*.png`.
+- Uso: recargar `/organizer/`, conectar con el token de organizador y pulsar **Gestionar retos → Nuevo reto**. Las pruebas no crearon ni eliminaron retos en la base de competición.
+
+## Corrección de lenguaje de los retos (2026-09-06)
+
+- Por petición expresa, los retos 1 «Hola mundo» y 2 «Una suma» usan ahora `main.js` en lugar de `main.py`; su comentario inicial usa `//`. Cambio transaccional verificado, con progreso y submissions intactos. Copia previa de los manifiestos en `.runtime/challenges-before-javascript.json`.
+- El reto 1 ya tenía un desbloqueo: se aplicó esta corrección administrativa puntual, sin modificar la restricción general del CRUD sobre archivos en uso. No se cambió el proyecto original.
+- El formulario crea `main.js` por defecto; ejemplos y pruebas de organizer adaptados. Las carpetas ya instaladas en las VMs no se sobrescriben con sync: hay que renombrar allí el archivo y usar sintaxis JavaScript.
+
+## Ajuste del editor de contenido (2026-09-06)
+
+El campo de contenido queda editable también en retos con actividad, a petición del usuario. Backend y organizer mantienen la prohibición de añadir/quitar/renombrar archivos o borrar retos con actividad. Se conservan el progreso y los envíos históricos; las VMs que ya descargaron el reto mantienen sus copias locales. Se amplían las pruebas de API, interfaz y E2E para comprobar la edición de un reto desbloqueado.
+
+Verificado: build y tipado correctos, 23 pruebas de backend y 9 de organizer correctas, E2E Chromium con edición y guardado de contenido en un reto desbloqueado. Backend reiniciado; basta con recargar el panel.
+
+## Resultado esperado privado (2026-09-06)
+
+- Añadido `Challenge.expected_output`: texto privado de hasta 60.000 bytes UTF-8, con espacios y saltos de línea intactos. `null` significa sin configurar; `""` representa salida vacía. POST/PUT del organizador permiten configurarlo; omitirlo al editar conserva el valor. Solo el detalle administrativo lo devuelve, nunca los DTO ni paquetes del participante.
+- Migración aditiva y reiniciable `002_expected_output` en `backend/src/database.ts`, aplicada al MySQL local. Los retos existentes quedan sin configurar; no se han inventado resultados ni modificado sus archivos. Backend reiniciado y `/health` correcto.
+- Organizer: **Gestionar retos → Editar → Evaluación → Resultado esperado**, también editable con actividad; permite esperar salida vacía y quitar la configuración. Documentados API/OpenAPI y uso. Los envíos siguen `pending`, sin implementar evaluador.
+- Comprobaciones completadas: build, tipado, 65 pruebas (25 backend, 9 organizer, 31 client), E2E Chromium escritorio/móvil con creación, persistencia y reapertura del campo. Cubierta actualización de esquema antiguo y recuperación tras DDL, validación UTF-8, privacidad y conservación de progreso. MySQL de pruebas detenido. Proyecto original intacto.

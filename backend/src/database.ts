@@ -49,6 +49,17 @@ export async function migrate(db: Database) {
       for (const sql of initial) await query(sql);
       await query("INSERT INTO schema_migrations (version) VALUES ('001_initial')");
     }
+    const outputApplied = await query(
+      "SELECT version FROM schema_migrations WHERE version = '002_expected_output'",
+    );
+    if (!outputApplied.length) {
+      const columns = await query(
+        "SELECT COLUMN_NAME FROM information_schema.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'challenges' AND COLUMN_NAME = 'expected_output'",
+      );
+      if (!columns.length)
+        await query('ALTER TABLE challenges ADD COLUMN expected_output TEXT NULL');
+      await query("INSERT INTO schema_migrations (version) VALUES ('002_expected_output')");
+    }
     await query('INSERT INTO competition_state (id) VALUES (1) ON DUPLICATE KEY UPDATE id = id');
   } finally {
     try {

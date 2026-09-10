@@ -30,6 +30,8 @@ En Linux usar `npm` en lugar de `npm.cmd`. Para desarrollo: `npm.cmd run dev` (b
 
 El cliente se distribuye por separado: no incluye backend, tests privados ni retos futuros.
 
+En Ubuntu/Linux:
+
 ```bash
 # Desde la raíz del proyecto, después del build:
 npm pack -w client
@@ -42,6 +44,23 @@ isard-sync
 cd ~/code-battle/challenge-1
 isard-submit
 ```
+
+En Windows (PowerShell):
+
+```powershell
+# Desde la raíz del proyecto, después del build:
+npm.cmd pack -w client
+# En la VM Windows con Node.js 24:
+npm.cmd install --prefix "$env:USERPROFILE\.local" C:\ruta\isard-client-0.1.0.tgz
+$env:PATH = "$env:USERPROFILE\.local\node_modules\.bin;$env:PATH"
+$env:BACKEND_URL = 'http://servidor:8000'
+$env:PARTICIPANT_TOKEN = 'token-privado-del-participante'
+isard-sync.cmd
+Set-Location "$env:USERPROFILE\code-battle\challenge-1"
+isard-submit.cmd
+```
+
+Las variables de entorno de estos ejemplos se aplican a la sesión actual de la terminal.
 
 `challenge-1` usa el ID, no la posición del reto. Consultar [client/README.md](client/README.md) para reglas de archivos y errores.
 
@@ -73,6 +92,14 @@ docker run --rm --mount "type=bind,source=$PWD,target=/source,readonly" --env TE
 
 `npm.cmd run import:sqlite -w backend -- C:\ruta\code_battle.db` importa desde SQLite **en modo de solo lectura** a una base MySQL vacía. Conserva IDs, hashes, manifiestos, progreso, puntuaciones y fechas con microsegundos; añade valores heredados `token_hash=null`, `public_files={}` y `files={}` cuando faltan. Verifica todos los campos antes del commit y rechaza un destino con datos. No usar sobre la base ya migrada.
 
-No se han añadido gestión de participantes/retos, evaluador, ranking nuevo ni mecanismos de autenticación distintos. Las operaciones de administración de datos siguen siendo responsabilidad de código de confianza del backend. La función `issueToken` genera/rota un token, y su llamador debe guardar el participante y entregar el token de forma privada.
+Los retos se gestionan desde **Gestionar retos** en el panel: crear, consultar, editar título/descripción y archivos públicos, y eliminar el último reto sin actividad. El contenido de los archivos sigue siendo editable cuando hay actividad; sus nombres quedan bloqueados. Las copias ya descargadas en las VMs no se sobrescriben. La posición se asigna siguiendo la secuencia y no cambia al editar. Si se elimina el reto global, el límite vuelve al anterior (o a 1 si no quedan retos).
+
+La gestión de participantes sigue dependiendo de código de confianza del backend. La función `issueToken` genera/rota un token, y su llamador debe guardar el participante y entregar el token de forma privada. No hay evaluador de soluciones: los envíos continúan `pending`.
 
 El estado de los bloques, resultados de pruebas, origen y decisiones están en [MIGRATION.md](MIGRATION.md).
+
+### Resultado esperado de cada reto
+
+En **Gestionar retos → Editar → Evaluación**, indica el **Resultado esperado** como salida de texto, incluidos espacios y saltos de línea. También puedes esperar una salida vacía o quitar la configuración. Es privado: solo la API del organizador lo devuelve, nunca el paquete ni la API del participante. Se puede editar en retos con actividad.
+
+La migración `002_expected_output` añade `challenges.expected_output` sin cambiar los datos existentes; inicialmente vale `null` (sin configurar). La API de creación/edición admite texto de hasta 60.000 bytes UTF-8 o `null`; omitirlo al editar conserva el valor. Una cadena vacía representa una salida vacía. El campo queda preparado para la evaluación: los envíos siguen en `pending`, sin evaluación automática.
