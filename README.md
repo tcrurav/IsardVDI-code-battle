@@ -26,6 +26,57 @@ Para una instalación nueva:
 
 En Linux usar `npm` en lugar de `npm.cmd`. Para desarrollo: `npm.cmd run dev` (backend con recarga); opcionalmente `npm.cmd run dev -w organizer` (Vite con proxy al backend).
 
+## Copia de seguridad de MySQL
+
+Con el servicio MySQL de Docker Compose en marcha y `backend/.env` configurado,
+ejecutar desde la raíz del proyecto:
+
+```powershell
+npm.cmd run backup:db
+# Opcional: guardar la copia en otro directorio
+npm.cmd run backup:db -- D:\Copias\code-battle
+```
+
+En Linux usar `npm` en lugar de `npm.cmd`. Requiere las dependencias del proyecto
+instaladas y Docker Compose; no necesita `mysqldump` instalado en el equipo.
+Este comando copia la base del servicio `mysql` de Compose, no una base externa
+configurada en `ISARD_DATABASE_URL`.
+
+Genera `backups/code-battle-<fecha UTC>-<identificador>.sql.gz`, con estructura y
+datos, usando las credenciales del contenedor. La copia usa una transacción
+consistente para las tablas InnoDB; evitar migraciones o cambios de estructura
+mientras se ejecuta. Si falla, devuelve un código de error y elimina el archivo
+incompleto. Las copias se excluyen de Git; contienen datos privados y deben
+guardarse en un destino protegido, preferiblemente fuera del equipo. No se
+eliminan copias anteriores automáticamente.
+
+### Restaurar una copia
+
+Detener el backend y cualquier otro proceso que escriba en la base; mantener
+MySQL de Docker Compose en marcha. Guardar una copia del estado actual antes
+de restaurar:
+
+```powershell
+npm.cmd run backup:db
+npm.cmd run restore:db -- "backups\code-battle-<fecha UTC>-<identificador>.sql.gz" --yes
+```
+
+`--yes` confirma la sustitución de los datos existentes; sin él, el script no
+modifica la base. Utiliza las credenciales del servicio `mysql` y `backend/.env`,
+igual que el backup. En Linux usar `npm` y rutas con `/`.
+
+El script descomprime y comprueba la integridad gzip completa antes de conectar
+a MySQL. Necesita espacio temporal para el SQL sin comprimir y elimina ese
+archivo al terminar. Restaurar únicamente copias propias de confianza: su
+contenido SQL se ejecuta en MySQL e incluye el nombre de la base original.
+La importación sustituye las tablas incluidas en la copia; no elimina tablas
+adicionales creadas después. Si falla durante la importación, puede dejar datos
+parcialmente restaurados: corregir el problema y repetir antes de arrancar el
+backend. Al terminar correctamente, volver a iniciar el backend.
+
+La copia incluye los archivos de retos y envíos almacenados en la base; no
+incluye `backend/.env` ni otros archivos del equipo.
+
 ## Cliente en las VMs
 
 El cliente se distribuye por separado: no incluye backend, tests privados ni retos futuros.
