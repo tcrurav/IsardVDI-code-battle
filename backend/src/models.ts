@@ -11,6 +11,7 @@ export class Challenge extends Model {
   declare position: number;
   declare title: string;
   declare description: string;
+  declare expected_output: string | null;
   declare public_files: Record<string, string>;
 }
 export class Progress extends Model {
@@ -67,6 +68,7 @@ export function defineModels(sequelize: Sequelize): Models {
       position: { type: DataTypes.INTEGER, allowNull: false, unique: true },
       title: { type: DataTypes.STRING(200), allowNull: false },
       description: { type: DataTypes.TEXT, allowNull: false, defaultValue: '' },
+      expected_output: { type: DataTypes.TEXT, allowNull: true, defaultValue: null },
       public_files: { type: DataTypes.JSON, allowNull: false, defaultValue: {} },
     },
     options('challenges'),

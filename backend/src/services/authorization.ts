@@ -12,7 +12,13 @@ export async function authorizeChallenge(
   // Serialize unlocks for a participant; the unique constraint remains the final guard.
   if (!(await Participant.findByPk(participantId, { transaction, lock: transaction.LOCK.UPDATE })))
     throw new AuthorizationDenied();
-  const challenge = await Challenge.findByPk(challengeId, { transaction });
+  // Use the same catalog lock order as organizer mutations. A manifest cannot
+  // change or disappear between authorization and recording the durable unlock.
+  const state = await CompetitionState.findByPk(1, { transaction, lock: transaction.LOCK.SHARE });
+  const challenge = await Challenge.findByPk(challengeId, {
+    transaction,
+    lock: transaction.LOCK.SHARE,
+  });
   if (!challenge) throw new AuthorizationDenied();
   if (
     await Progress.findOne({
@@ -21,7 +27,6 @@ export async function authorizeChallenge(
     })
   )
     return challenge;
-  const state = await CompetitionState.findByPk(1, { transaction, lock: transaction.LOCK.SHARE });
   if (
     !state ||
     state.paused ||

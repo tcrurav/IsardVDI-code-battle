@@ -10,6 +10,14 @@ import { authenticate, organizerMatches } from './services/authentication.js';
 import { availableChallenges, challengePackage, createSubmission } from './services/challenges.js';
 import { advance, changeState, dashboard } from './services/organizer.js';
 import { participantRead, positiveInteger, statePatch, submissionCreate } from './schemas.js';
+import {
+  challengeInput,
+  listChallenges,
+  readChallenge,
+  createChallenge,
+  updateChallenge,
+  deleteChallenge,
+} from './services/challenge-admin.js';
 
 export async function createApp(config: Settings) {
   const db = database(config.databaseUrl);
@@ -91,6 +99,24 @@ export async function createApp(config: Settings) {
   });
   app.patch('/api/organizer/state', async (req, res) => {
     res.json(await changeState(db, statePatch(req.body)));
+  });
+  app.get('/api/organizer/challenges', async (_req, res) => {
+    res.json(await listChallenges(db));
+  });
+  app.get('/api/organizer/challenges/:id', async (req, res) => {
+    res.json(await readChallenge(db, positiveInteger(req.params.id)));
+  });
+  app.post('/api/organizer/challenges', async (req, res) => {
+    res.status(201).json(await createChallenge(db, challengeInput(req.body, true)));
+  });
+  app.put('/api/organizer/challenges/:id', async (req, res) => {
+    res.json(
+      await updateChallenge(db, positiveInteger(req.params.id), challengeInput(req.body, false)),
+    );
+  });
+  app.delete('/api/organizer/challenges/:id', async (req, res) => {
+    await deleteChallenge(db, positiveInteger(req.params.id));
+    res.status(204).end();
   });
   app.use(
     '/organizer',
