@@ -28,7 +28,7 @@ try {
   const m = app.db.models;
   await m.Participant.create({ id: 1, name: 'Participante de prueba' });
   await m.Challenge.bulkCreate([
-    { id: 10, position: 1, title: 'Primer reto' },
+    { id: 10, position: 1, title: 'Primer reto', public_files: { 'main.js': '// Inicio' } },
     { id: 20, position: 2, title: 'Segundo reto' },
   ]);
   await m.Progress.create({ participant_id: 1, challenge_id: 10, score: 5 });
@@ -57,6 +57,53 @@ try {
   );
   assert.equal(await m.Progress.count(), 1);
   await mkdir('.runtime/screenshots', { recursive: true });
+  await page.getByRole('button', { name: 'Gestionar retos', exact: true }).click();
+  await page.getByRole('button', { name: 'Editar reto 1', exact: true }).click();
+  assert.equal(await page.getByLabel('Ruta del archivo 1', { exact: true }).isDisabled(), true);
+  await page.getByLabel('Contenido del archivo 1', { exact: true }).fill('console.log(1)');
+  await page.getByLabel('Resultado esperado', { exact: true }).fill('1\n');
+  await page.getByRole('button', { name: 'Guardar reto', exact: true }).click();
+  await page.getByLabel('Contenido del archivo 1', { exact: true }).waitFor({ state: 'detached' });
+  assert.equal((await m.Challenge.findByPk(10))!.public_files['main.js'], 'console.log(1)');
+  assert.equal((await m.Challenge.findByPk(10))!.expected_output, '1\n');
+  assert.equal(await m.Progress.count(), 1);
+  await page.getByRole('button', { name: 'Nuevo reto', exact: true }).click();
+  await page.getByLabel('Título', { exact: true }).fill('Reto CRUD de prueba');
+  await page.getByLabel('Descripción', { exact: true }).fill('Instrucciones públicas');
+  await page.getByLabel('Contenido del archivo 1', { exact: true }).fill('console.log(42)');
+  await page.getByLabel('Resultado esperado', { exact: true }).fill('42\n');
+  await page.screenshot({ path: '.runtime/screenshots/challenges-desktop.png', fullPage: true });
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.screenshot({ path: '.runtime/screenshots/challenges-mobile.png', fullPage: true });
+  assert.equal(
+    await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth),
+    true,
+  );
+  await page.getByRole('button', { name: 'Guardar reto', exact: true }).click();
+  await page.getByRole('cell', { name: 'Reto CRUD de prueba', exact: true }).waitFor();
+  await page.getByRole('button', { name: 'Editar reto 3', exact: true }).click();
+  await page.getByLabel('Resultado esperado', { exact: true }).waitFor();
+  assert.equal(await page.getByLabel('Resultado esperado', { exact: true }).inputValue(), '42\n');
+  await page.getByLabel('Título', { exact: true }).fill('Reto editado');
+  await page.getByRole('button', { name: 'Guardar reto', exact: true }).click();
+  await page.getByRole('cell', { name: 'Reto editado', exact: true }).waitFor();
+  const created = await m.Challenge.findOne({ where: { position: 3 } });
+  assert.equal(created!.public_files['main.js'], 'console.log(42)');
+  assert.equal(created!.title, 'Reto editado');
+  assert.equal(created!.expected_output, '42\n');
+  assert.equal(
+    await page.getByRole('button', { name: 'Eliminar reto 1', exact: true }).isDisabled(),
+    true,
+  );
+  await page.getByRole('button', { name: 'Eliminar reto 3', exact: true }).click();
+  await page.getByRole('button', { name: 'Confirmar eliminación', exact: true }).click();
+  await page
+    .getByRole('cell', { name: 'Reto editado', exact: true })
+    .waitFor({ state: 'detached' });
+  assert.equal(await m.Challenge.count(), 2);
+  assert.equal(await m.Progress.count(), 1);
+  await page.getByRole('button', { name: 'Cerrar gestión de retos', exact: true }).click();
+  await page.setViewportSize({ width: 1280, height: 900 });
   await page.screenshot({ path: '.runtime/screenshots/organizer-desktop.png', fullPage: true });
   await page.setViewportSize({ width: 390, height: 844 });
   await page.screenshot({ path: '.runtime/screenshots/organizer-mobile.png', fullPage: true });

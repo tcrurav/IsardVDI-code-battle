@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react';
+import { ChallengeManager } from './ChallengeManager.js';
 export interface Dashboard {
   state: { current_challenge: number; paused: boolean; individual_progress_enabled: boolean };
   global_challenge_title: string | null;
@@ -24,11 +25,13 @@ export function App() {
   const [message, setMessage] = useState('');
   const [error, setError] = useState(false);
   const [updated, setUpdated] = useState('');
+  const [manageChallenges, setManageChallenges] = useState(false);
   function disconnect() {
     token.current = '';
     setInput('');
     setSnapshot(null);
     setFresh(false);
+    setManageChallenges(false);
   }
   async function request(path: string, method = 'GET', body?: object) {
     if (inFlight.current) return;
@@ -136,7 +139,21 @@ export function App() {
               Desconectar
             </button>
             <span id="updated">Actualizado: {updated}</span>
+            <button
+              type="button"
+              aria-expanded={manageChallenges}
+              onClick={() => setManageChallenges((value) => !value)}
+            >
+              {manageChallenges ? 'Cerrar gestión de retos' : 'Gestionar retos'}
+            </button>
           </div>
+          {manageChallenges && (
+            <ChallengeManager
+              token={token.current}
+              onUnauthorized={disconnect}
+              onChanged={() => void request('dashboard')}
+            />
+          )}
           <h2>Competición</h2>
           <dl>
             <dt>Reto global</dt>

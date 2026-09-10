@@ -18,7 +18,7 @@ Documentación interactiva en `/docs`, especificación en `/openapi.json` y vist
 | GET    | `/api/me`                      | Bearer participante; id, nombre y fecha                                                         |
 | GET    | `/api/challenges/available`    | Bearer participante; metadatos ordenados, persiste desbloqueos                                  |
 | GET    | `/api/challenges/{id}/package` | Bearer participante; ZIP público autorizado, sin caché                                          |
-| POST   | `/api/submissions`             | Bearer participante; `{"challenge_id":1,"files":{"main.py":"pass"}}`; 201 y resultado `pending` |
+| POST   | `/api/submissions`             | Bearer participante; `{"challenge_id":1,"files":{"main.js":"pass"}}`; 201 y resultado `pending` |
 | GET    | `/api/organizer/dashboard`     | Bearer organizador; estado, controles disponibles y participantes                               |
 | POST   | `/api/organizer/advance`       | Bearer organizador; avanza una posición existente                                               |
 | PATCH  | `/api/organizer/state`         | Bearer organizador; booleanos `paused` / `individual_progress_enabled`                          |
@@ -32,3 +32,27 @@ Solo se empaqueta `public_files`, un mapa explícito de nombres POSIX y texto p�
 Los tokens de participante se guardan únicamente como SHA-256. `ISARD_ORGANIZER_TOKEN` es independiente y se compara en tiempo constante; sin token configurado se deniega administración. No se registran credenciales en errores.
 
 Las pruebas se ejecutan desde la raíz con `TEST_DATABASE_URL` y `npm run test -w backend`; incluyen MySQL real, matriz de autorización, concurrencia, rollback, importación heredada y CLI por HTTP.
+
+## CRUD de retos
+
+Todas las rutas requieren el Bearer del organizador, nunca el de participante:
+
+| Método | Ruta                             | Resultado                                                                                         |
+| ------ | -------------------------------- | ------------------------------------------------------------------------------------------------- |
+| GET    | `/api/organizer/challenges`      | `{items, next_position}`; cada elemento indica `in_use` y `can_delete`, sin contenido de archivos |
+| GET    | `/api/organizer/challenges/{id}` | Detalle con `public_files` e `in_use`                                                             |
+| POST   | `/api/organizer/challenges`      | 201; cuerpo `position`, `title`, `description`, `public_files`                                    |
+| PUT    | `/api/organizer/challenges/{id}` | 200; reemplaza `title`, `description`, `public_files`; posición inmutable                         |
+| DELETE | `/api/organizer/challenges/{id}` | 204; solo último reto sin progreso ni submissions                                                 |
+
+Título no vacío, hasta 200 caracteres; descripción hasta 60.000 bytes UTF-8; archivos validados con los límites del cliente, incluyendo nombres reservados Windows y colisiones Unicode/ruta. Al crear se exige al menos un archivo. No se aceptan campos adicionales. Un reto inexistente da 404; una restricción de actividad o secuencia da 409. La actividad incluye cualquier `Progress`, aunque esté incompleto, y cualquier submission.
+
+Las mutaciones se serializan con el estado de competición; la autorización de descarga/envío usa el mismo orden de bloqueos, impidiendo cambiar un manifiesto mientras se concede acceso. No se eliminan progresos ni envíos en cascada. Al borrar el reto global sin actividad se ajusta el límite al anterior, con mínimo 1. No hacen falta migraciones de esquema para este CRUD.
+
+Con actividad, PUT permite cambiar el contenido conservando exactamente los mismos nombres de archivo; añadir, quitar o renombrar devuelve 409. Los envíos históricos y el progreso no cambian. Los nuevos paquetes incluyen el contenido actualizado, pero `isard-sync` conserva las carpetas ya instaladas en las VMs.
+
+### Resultado esperado de cada reto
+
+En **Gestionar retos → Editar → Evaluación**, indica el **Resultado esperado** como salida de texto, incluidos espacios y saltos de línea. También puedes esperar una salida vacía o quitar la configuración. Es privado: solo la API del organizador lo devuelve, nunca el paquete ni la API del participante. Se puede editar en retos con actividad.
+
+La migración `002_expected_output` añade `challenges.expected_output` sin cambiar los datos existentes; inicialmente vale `null` (sin configurar). La API de creación/edición admite texto de hasta 60.000 bytes UTF-8 o `null`; omitirlo al editar conserva el valor. Una cadena vacía representa una salida vacía. El campo queda preparado para la evaluación: los envíos siguen en `pending`, sin evaluación automática.

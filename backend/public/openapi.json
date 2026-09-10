@@ -244,6 +244,361 @@
           }
         ]
       }
+    },
+    "/api/organizer/challenges": {
+      "get": {
+        "summary": "Listar retos y siguiente posición disponible",
+        "tags": ["Gestión de retos"],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeAdminCatalog"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear reto en la siguiente posición disponible",
+        "tags": ["Gestión de retos"],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeAdminCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": {
+            "description": "Operación completada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeAdminDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/api/organizer/challenges/{id}": {
+      "get": {
+        "summary": "Consultar reto y archivos públicos",
+        "tags": ["Gestión de retos"],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Operación completada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeAdminDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Editar reto y contenido; nombres de archivo inmutables si tiene actividad",
+        "tags": ["Gestión de retos"],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ChallengeAdminUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Operación completada",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ChallengeAdminDetail"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar último reto sin actividad; ajustar límite global si procede",
+        "tags": ["Gestión de retos"],
+        "security": [
+          {
+            "HTTPBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "Operación completada"
+          },
+          "401": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Error con detail",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
     }
   },
   "components": {
@@ -442,7 +797,7 @@
         "properties": {
           "challenge_id": {
             "type": "integer",
-            "exclusiveMinimum": 0.0,
+            "exclusiveMinimum": 0,
             "title": "Challenge Id"
           },
           "files": {
@@ -535,6 +890,138 @@
         "type": "object",
         "required": ["loc", "msg", "type"],
         "title": "ValidationError"
+      },
+      "ChallengeAdminCreate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["position", "title", "description", "public_files"],
+        "properties": {
+          "position": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "Hasta 60.000 bytes UTF-8."
+          },
+          "public_files": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "description": "Material público; hasta 1.000.000 bytes UTF-8 y rutas portables seguras."
+          },
+          "expected_output": {
+            "type": "string",
+            "nullable": true,
+            "description": "Resultado privado: hasta 60.000 bytes UTF-8, conserva espacios y saltos de línea. null = sin configurar; cadena vacía = salida vacía. Omitir en PUT conserva el valor. No activa evaluación automática."
+          }
+        }
+      },
+      "ChallengeAdminUpdate": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["title", "description", "public_files"],
+        "properties": {
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "Hasta 60.000 bytes UTF-8."
+          },
+          "public_files": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "description": "Material público; hasta 1.000.000 bytes UTF-8 y rutas portables seguras."
+          },
+          "expected_output": {
+            "type": "string",
+            "nullable": true,
+            "description": "Resultado privado: hasta 60.000 bytes UTF-8, conserva espacios y saltos de línea. null = sin configurar; cadena vacía = salida vacía. Omitir en PUT conserva el valor. No activa evaluación automática."
+          }
+        }
+      },
+      "ChallengeAdminDetail": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "integer"
+          },
+          "position": {
+            "type": "integer"
+          },
+          "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+          },
+          "description": {
+            "type": "string",
+            "description": "Hasta 60.000 bytes UTF-8."
+          },
+          "public_files": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            },
+            "maxProperties": 100,
+            "description": "Material público; hasta 1.000.000 bytes UTF-8 y rutas portables seguras."
+          },
+          "in_use": {
+            "type": "boolean"
+          },
+          "expected_output": {
+            "type": "string",
+            "nullable": true,
+            "description": "Resultado privado: hasta 60.000 bytes UTF-8, conserva espacios y saltos de línea. null = sin configurar; cadena vacía = salida vacía. Omitir en PUT conserva el valor. No activa evaluación automática."
+          }
+        }
+      },
+      "ChallengeAdminCatalog": {
+        "type": "object",
+        "properties": {
+          "next_position": {
+            "type": "integer"
+          },
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "id": {
+                  "type": "integer"
+                },
+                "position": {
+                  "type": "integer"
+                },
+                "title": {
+                  "type": "string"
+                },
+                "description": {
+                  "type": "string"
+                },
+                "in_use": {
+                  "type": "boolean"
+                },
+                "can_delete": {
+                  "type": "boolean"
+                }
+              }
+            }
+          }
+        }
       }
     },
     "securitySchemes": {
