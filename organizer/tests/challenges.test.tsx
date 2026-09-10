@@ -16,6 +16,23 @@ afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
 });
+
+test('explains a missing catalog endpoint and enables first challenge creation after retry', async () => {
+  const fetcher = vi
+    .fn()
+    .mockResolvedValueOnce(response({ detail: 'Not Found' }, 404))
+    .mockResolvedValueOnce(response({ items: [], next_position: 1 }));
+  vi.stubGlobal('fetch', fetcher);
+  render(<ChallengeManager token="admin" onUnauthorized={vi.fn()} onChanged={vi.fn()} />);
+  await screen.findByText(/El servidor no ofrece la gestión de retos/);
+  expect((screen.getByText('Nuevo reto') as HTMLButtonElement).disabled).toBe(true);
+  fireEvent.click(screen.getByText('Actualizar retos'));
+  await waitFor(() =>
+    expect((screen.getByText('Nuevo reto') as HTMLButtonElement).disabled).toBe(false),
+  );
+  fireEvent.click(screen.getByText('Nuevo reto'));
+  expect(screen.getByLabelText('Título')).toBeTruthy();
+});
 test('create public files, edit detail, then confirm deletion using organizer credentials', async () => {
   const changed = vi.fn();
   const fetcher = vi.fn(async (path: string, options: RequestInit) => {
